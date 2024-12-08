@@ -9,5 +9,3 @@ services:
     ports:
       - "8080:80"  # Web zerbitzarirako portua
       - "2222:22"  # SSH-rako portua (kontainer barruko 22ra mapeatuta)
-    volumes:
-      - ./web/uploads:/var/www/html/uploads

@@ -67,7 +67,7 @@
       command: "systemctl restart ctf-checkermaster@{{ item }}"
       loop: "{{ services_to_install.stdout_lines }}"
 
-    - name: create db entries for services
+    - name: create db entries for services #hau begiratu, errorea ematen dit
       become: true
       become_user: postgres
       shell: psql -d ctf_gameserver -c "INSERT INTO scoring_service (name, slug) VALUES ('{{ item }}', '{{ item }}');"

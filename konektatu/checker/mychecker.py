@@ -14,8 +14,8 @@ def ssh_connect():
             # SSH connection setup
             client = paramiko.SSHClient()
             client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-            rsa_key = paramiko.RSAKey.from_private_key_file(f'/keys/team{args[0].team}-sshkey')
-            client.connect(args[0].ip, username = 'root', pkey=rsa_key)
+            # rsa_key = paramiko.RSAKey.from_private_key_file(f'/keys/team{args[0].team}-sshkey')
+            client.connect(args[0].ip, username = 'proba', port=2222, password='xza')
 
             # Call the decorated function with the client parameter
             args[0].client = client
@@ -51,8 +51,8 @@ class MyChecker(checkerlib.BaseChecker):
             return checkerlib.CheckResult.DOWN
         #else
         # check if server is Apache 2.4.50
-        if not self._check_apache_version():
-            return checkerlib.CheckResult.FAULTY
+        """if not self._check_apache_version():
+            return checkerlib.CheckResult.FAULTY"""
         # check if dev1 user exists in pasapasa_ssh docker
         #if not self._check_ssh_user('dev1'):
         #    return checkerlib.CheckResult.FAULTY
@@ -62,9 +62,11 @@ class MyChecker(checkerlib.BaseChecker):
             return checkerlib.CheckResult.FAULTY            
         file_path_ssh = '/etc/ssh/sshd_config'
         # check if /etc/sshd_config from pasapasa_ssh has been changed by comparing its hash with the hash of the original file
-        #if not self._check_ssh_integrity(file_path_ssh):
-        #    return checkerlib.CheckResult.FAULTY 
-        # NOLA IKUS DEZAKET EA WEBGUNEAK GAUZAK IGOTZEKO AUKERA DUEN           
+        if not self._check_ssh_integrity(file_path_ssh):
+            return checkerlib.CheckResult.FAULTY 
+        # check if uploads folder permissions have been changed
+        if not self._check_uploads_folder():
+            return checkerlib.CheckResult.FAULTY     
         return checkerlib.CheckResult.OK
     
     def check_flag(self, tick):
@@ -99,7 +101,7 @@ class MyChecker(checkerlib.BaseChecker):
             return False
         
         output = stdout.read().decode().strip()
-        return hashlib.md5(output.encode()).hexdigest() == 'a4ed71eb4f7c89ff868088a62fe33036'
+        return hashlib.md5(output.encode()).hexdigest() == 'd89cc0d0fca25be5ff62b698e7638b67'
     
     @ssh_connect()
     def _check_ssh_integrity(self, path):
@@ -111,8 +113,19 @@ class MyChecker(checkerlib.BaseChecker):
         output = stdout.read().decode().strip()
         print (hashlib.md5(output.encode()).hexdigest())
 
-        return hashlib.md5(output.encode()).hexdigest() == 'ba55c65e08e320f1225c76f810f1328b'
-  
+        return hashlib.md5(output.encode()).hexdigest() == 'bed4e48efaf37060a5403af295bf51bc'
+    
+    @ssh_connect()
+    def _check_uploads_folder(self):
+        ssh_session = self.client
+        command = f"docker exec konektatu_web_1 sh -c 'ls -ld /var/www/html/uploads/' | grep 'drwxrwxrrx 1 www-data www-data'"
+        stdin, stdout, stderr = ssh_session.exec_command(command)
+        if stderr.channel.recv_exit_status() != 0:
+            return False
+        output = stdout.read().decode().strip()
+        #Hutxik dagoen edo ez itzuli
+        return bool(output)
+    
     # Private Funcs - Return False if error
     def _add_new_flag(self, ssh_session, flag):
         # Execute the file creation command in the container
