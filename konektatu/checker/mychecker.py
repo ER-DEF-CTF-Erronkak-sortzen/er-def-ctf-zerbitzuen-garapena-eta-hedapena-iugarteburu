@@ -6,8 +6,8 @@ import http.client
 import socket
 import paramiko
 import hashlib
-PORT_WEB = 9797
-PORT_SSH = 8822
+PORT_WEB = 8080
+PORT_SSH = 2222
 def ssh_connect():
     def decorator(func):
         def wrapper(*args, **kwargs):
@@ -54,16 +54,17 @@ class MyChecker(checkerlib.BaseChecker):
         if not self._check_apache_version():
             return checkerlib.CheckResult.FAULTY
         # check if dev1 user exists in pasapasa_ssh docker
-        if not self._check_ssh_user('dev1'):
-            return checkerlib.CheckResult.FAULTY
-        file_path_web = '/usr/local/apache2/htdocs/index.html'
-        # check if index.hmtl from pasapasa_web has been changed by comparing its hash with the hash of the original file
+        #if not self._check_ssh_user('dev1'):
+        #    return checkerlib.CheckResult.FAULTY
+        file_path_web = '/var/www/html/irudiak.php'
+        # check if irudiak.php from konektatu_web has been changed by comparing its hash with the hash of the original file
         if not self._check_web_integrity(file_path_web):
             return checkerlib.CheckResult.FAULTY            
         file_path_ssh = '/etc/ssh/sshd_config'
         # check if /etc/sshd_config from pasapasa_ssh has been changed by comparing its hash with the hash of the original file
-        if not self._check_ssh_integrity(file_path_ssh):
-            return checkerlib.CheckResult.FAULTY            
+        #if not self._check_ssh_integrity(file_path_ssh):
+        #    return checkerlib.CheckResult.FAULTY 
+        # NOLA IKUS DEZAKET EA WEBGUNEAK GAUZAK IGOTZEKO AUKERA DUEN           
         return checkerlib.CheckResult.OK
     
     def check_flag(self, tick):
@@ -79,20 +80,20 @@ class MyChecker(checkerlib.BaseChecker):
             return checkerlib.CheckResult.FLAG_NOT_FOUND
         return checkerlib.CheckResult.OK
         
-    @ssh_connect()
+    """@ssh_connect()
     #Function to check if an user exists
     def _check_ssh_user(self, username):
         ssh_session = self.client
-        command = f"docker exec pasapasa_ssh_1 sh -c 'id {username}'"
+        command = f"docker exec konektatu_ssh_1 sh -c 'id {username}'"
         stdin, stdout, stderr = ssh_session.exec_command(command)
         if stderr.channel.recv_exit_status() != 0:
             return False
-        return True
+        return True"""
       
     @ssh_connect()
     def _check_web_integrity(self, path):
         ssh_session = self.client
-        command = f"docker exec pasapasa_web_1 sh -c 'cat {path}'"
+        command = f"docker exec konektatu_web_1 sh -c 'cat {path}'"
         stdin, stdout, stderr = ssh_session.exec_command(command)
         if stderr.channel.recv_exit_status() != 0:
             return False
@@ -103,7 +104,7 @@ class MyChecker(checkerlib.BaseChecker):
     @ssh_connect()
     def _check_ssh_integrity(self, path):
         ssh_session = self.client
-        command = f"docker exec pasapasa_ssh_1 sh -c 'cat {path}'"
+        command = f"docker exec konektatu_web_1 sh -c 'cat {path}'"
         stdin, stdout, stderr = ssh_session.exec_command(command)
         if stderr.channel.recv_exit_status() != 0:
             return False
@@ -115,7 +116,7 @@ class MyChecker(checkerlib.BaseChecker):
     # Private Funcs - Return False if error
     def _add_new_flag(self, ssh_session, flag):
         # Execute the file creation command in the container
-        command = f"docker exec pasapasa_ssh_1 sh -c 'echo {flag} >> /tmp/flag.txt'"
+        command = f"docker exec konektatu_web_1 sh -c 'echo {flag} >> /tmp/flag.txt'"
         stdin, stdout, stderr = ssh_session.exec_command(command)
 
         # Check if the command executed successfully
@@ -128,7 +129,7 @@ class MyChecker(checkerlib.BaseChecker):
     @ssh_connect()
     def _check_flag_present(self, flag):
         ssh_session = self.client
-        command = f"docker exec pasapasa_ssh_1 sh -c 'grep {flag} /tmp/flag.txt'"
+        command = f"docker exec konektatu_web_1 sh -c 'grep {flag} /tmp/flag.txt'"
         stdin, stdout, stderr = ssh_session.exec_command(command)
         if stderr.channel.recv_exit_status() != 0:
             return False
