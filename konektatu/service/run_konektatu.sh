@@ -1,0 +1,1 @@
+docker-compose -f "$SERVICES_PATH/konektatu/docker-compose.yml" up -d --build
