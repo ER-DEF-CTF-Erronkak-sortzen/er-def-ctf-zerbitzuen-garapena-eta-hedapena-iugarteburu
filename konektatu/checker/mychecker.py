@@ -14,8 +14,7 @@ def ssh_connect():
             # SSH connection setup
             client = paramiko.SSHClient()
             client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-            # rsa_key = paramiko.RSAKey.from_private_key_file(f'/keys/team{args[0].team}-sshkey')
-            client.connect(args[0].ip, username = 'proba', port=2222, password='xza')
+            client.connect(args[0].ip, username = 'proba', port=PORT_SSH, password='xza')
 
             # Call the decorated function with the client parameter
             args[0].client = client
@@ -38,6 +37,7 @@ class MyChecker(checkerlib.BaseChecker):
     def place_flag(self, tick):
         flag = checkerlib.get_flag(tick)
         creds = self._add_new_flag(self.client, flag)
+        logging.info(f'creds: {creds}')
         if not creds:
             return checkerlib.CheckResult.FAULTY
         logging.info('created')
@@ -50,18 +50,16 @@ class MyChecker(checkerlib.BaseChecker):
         if not self._check_port_web(self.ip, PORT_WEB) or not self._check_port_ssh(self.ip, PORT_SSH):
             return checkerlib.CheckResult.DOWN
         #else
-        # check if server is Apache 2.4.50
-        """if not self._check_apache_version():
-            return checkerlib.CheckResult.FAULTY"""
-        # check if dev1 user exists in pasapasa_ssh docker
-        #if not self._check_ssh_user('dev1'):
-        #    return checkerlib.CheckResult.FAULTY
-        file_path_web = '/var/www/html/irudiak.php'
+        # check if server is Apache 2.4.54
+        if not self._check_apache_version():
+            return checkerlib.CheckResult.FAULTY
+        
         # check if irudiak.php from konektatu_web has been changed by comparing its hash with the hash of the original file
+        file_path_web = '/var/www/html/irudiak.php'
         if not self._check_web_integrity(file_path_web):
             return checkerlib.CheckResult.FAULTY            
-        file_path_ssh = '/etc/ssh/sshd_config'
         # check if /etc/sshd_config from pasapasa_ssh has been changed by comparing its hash with the hash of the original file
+        file_path_ssh = '/etc/ssh/sshd_config'
         if not self._check_ssh_integrity(file_path_ssh):
             return checkerlib.CheckResult.FAULTY 
         # check if uploads folder permissions have been changed
@@ -73,52 +71,39 @@ class MyChecker(checkerlib.BaseChecker):
         if not self.check_service():
             return checkerlib.CheckResult.DOWN
         flag = checkerlib.get_flag(tick)
-        #creds = checkerlib.load_state("flag_" + str(tick))
-        # if not creds:
-        #     logging.error(f"Cannot find creds for tick {tick}")
-        #     return checkerlib.CheckResult.FLAG_NOT_FOUND
         flag_present = self._check_flag_present(flag)
         if not flag_present:
             return checkerlib.CheckResult.FLAG_NOT_FOUND
         return checkerlib.CheckResult.OK
-        
-    """@ssh_connect()
-    #Function to check if an user exists
-    def _check_ssh_user(self, username):
-        ssh_session = self.client
-        command = f"docker exec konektatu_ssh_1 sh -c 'id {username}'"
-        stdin, stdout, stderr = ssh_session.exec_command(command)
-        if stderr.channel.recv_exit_status() != 0:
-            return False
-        return True"""
       
     @ssh_connect()
     def _check_web_integrity(self, path):
         ssh_session = self.client
-        command = f"docker exec konektatu_web_1 sh -c 'cat {path}'"
+        command = f"cat {path}"
         stdin, stdout, stderr = ssh_session.exec_command(command)
         if stderr.channel.recv_exit_status() != 0:
             return False
         
         output = stdout.read().decode().strip()
-        return hashlib.md5(output.encode()).hexdigest() == 'd89cc0d0fca25be5ff62b698e7638b67'
+        return hashlib.md5(output.encode()).hexdigest() == 'ac5f978bc2f26600c76f078104d477df'
     
     @ssh_connect()
     def _check_ssh_integrity(self, path):
         ssh_session = self.client
-        command = f"docker exec konektatu_web_1 sh -c 'cat {path}'"
+        command = f"cat {path}"
         stdin, stdout, stderr = ssh_session.exec_command(command)
         if stderr.channel.recv_exit_status() != 0:
             return False
         output = stdout.read().decode().strip()
         print (hashlib.md5(output.encode()).hexdigest())
 
-        return hashlib.md5(output.encode()).hexdigest() == 'bed4e48efaf37060a5403af295bf51bc'
+        return hashlib.md5(output.encode()).hexdigest() == 'a38e22a50d260179a6cc7caaa88e85e6'
     
     @ssh_connect()
     def _check_uploads_folder(self):
         ssh_session = self.client
-        command = f"docker exec konektatu_web_1 sh -c 'ls -ld /var/www/html/uploads/' | grep 'drwxrwxrrx 1 www-data www-data'"
+        command = f"ls -ld /var/www/html/uploads/ | grep 'drwxrwxrwx 1 www-data www-data'"
+
         stdin, stdout, stderr = ssh_session.exec_command(command)
         if stderr.channel.recv_exit_status() != 0:
             return False
@@ -129,7 +114,7 @@ class MyChecker(checkerlib.BaseChecker):
     # Private Funcs - Return False if error
     def _add_new_flag(self, ssh_session, flag):
         # Execute the file creation command in the container
-        command = f"docker exec konektatu_web_1 sh -c 'echo {flag} >> /tmp/flag.txt'"
+        command = f"echo {flag} >> /tmp/flag.txt"
         stdin, stdout, stderr = ssh_session.exec_command(command)
 
         # Check if the command executed successfully
@@ -142,7 +127,7 @@ class MyChecker(checkerlib.BaseChecker):
     @ssh_connect()
     def _check_flag_present(self, flag):
         ssh_session = self.client
-        command = f"docker exec konektatu_web_1 sh -c 'grep {flag} /tmp/flag.txt'"
+        command = f"grep {flag} /tmp/flag.txt"
         stdin, stdout, stderr = ssh_session.exec_command(command)
         if stderr.channel.recv_exit_status() != 0:
             return False
@@ -178,7 +163,7 @@ class MyChecker(checkerlib.BaseChecker):
     @ssh_connect()
     def _check_apache_version(self):
         ssh_session = self.client
-        command = f"docker exec pasapasa_web_1 sh -c 'httpd -v | grep \"Apache/2.4.50\'"
+        command = f"apache2 -v | grep 'Apache/2.4.54'"
         stdin, stdout, stderr = ssh_session.exec_command(command)
 
         if stdout:
