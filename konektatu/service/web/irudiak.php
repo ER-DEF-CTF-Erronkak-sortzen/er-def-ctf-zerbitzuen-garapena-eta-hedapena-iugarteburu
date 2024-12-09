@@ -16,31 +16,20 @@
 
 <?php
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Ruta absoluta del directorio de uploads
     $uploadDir = '/var/www/html/uploads/';
-    // Ruta completa del archivo cargado
     $uploadFile = $uploadDir . basename($_FILES['file']['name']);
 
-    // Mostrar detalles completos de los archivos cargados para depuración
-    echo "<pre>";
-    print_r($_FILES);
-    echo "</pre>";
-
-    // Comprobar si el directorio 'uploads' es accesible
     if (!is_dir($uploadDir)) {
         echo "<p>El directorio 'uploads' no existe.</p>";
     }
 
-    // Comprobar si el directorio es escribible
     if (!is_writable($uploadDir)) {
         echo "<p>El directorio 'uploads' no tiene permisos de escritura.</p>";
     }
 
-    // Intentar mover el archivo a la carpeta 'uploads'
     if (move_uploaded_file($_FILES['file']['tmp_name'], $uploadFile)) {
         echo "<p>El archivo ha sido subido correctamente: " . htmlspecialchars(basename($_FILES['file']['name'])) . "</p>";
     } else {
-        // Mostrar ruta temporal y destino para depuración
         echo "<p>Error al mover el archivo. Detalles:</p>";
         echo "<ul>";
         echo "<li>Archivo temporal: " . $_FILES['file']['tmp_name'] . "</li>";

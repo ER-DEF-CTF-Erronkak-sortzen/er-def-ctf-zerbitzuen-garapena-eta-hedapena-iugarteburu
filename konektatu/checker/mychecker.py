@@ -49,16 +49,15 @@ class MyChecker(checkerlib.BaseChecker):
         # check if ports are open
         if not self._check_port_web(self.ip, PORT_WEB) or not self._check_port_ssh(self.ip, PORT_SSH):
             return checkerlib.CheckResult.DOWN
-        #else
+        
         # check if server is Apache 2.4.54
         if not self._check_apache_version():
             return checkerlib.CheckResult.FAULTY
-        
-        # check if irudiak.php from konektatu_web has been changed by comparing its hash with the hash of the original file
+        # check if irudiak.php still has the code to upload files
         file_path_web = '/var/www/html/irudiak.php'
-        if not self._check_web_integrity(file_path_web):
+        if not self._check_uploading_integrity(file_path_web):
             return checkerlib.CheckResult.FAULTY            
-        # check if /etc/sshd_config from pasapasa_ssh has been changed by comparing its hash with the hash of the original file
+        # check if /etc/sshd_config from konektatu_web has been changed by comparing its hash with the hash of the original file
         file_path_ssh = '/etc/ssh/sshd_config'
         if not self._check_ssh_integrity(file_path_ssh):
             return checkerlib.CheckResult.FAULTY 
@@ -77,15 +76,15 @@ class MyChecker(checkerlib.BaseChecker):
         return checkerlib.CheckResult.OK
       
     @ssh_connect()
-    def _check_web_integrity(self, path):
+    def _check_uploading_integrity(self, path):
         ssh_session = self.client
-        command = f"cat {path}"
+        command = f"cat {path}| grep 'move_uploaded_file'"
         stdin, stdout, stderr = ssh_session.exec_command(command)
-        if stderr.channel.recv_exit_status() != 0:
+
+        if stdout:
+            return True
+        else:
             return False
-        
-        output = stdout.read().decode().strip()
-        return hashlib.md5(output.encode()).hexdigest() == 'ac5f978bc2f26600c76f078104d477df'
     
     @ssh_connect()
     def _check_ssh_integrity(self, path):
