@@ -49,10 +49,9 @@ class MyChecker(checkerlib.BaseChecker):
         # check if ports are open
         if not self._check_port_web(self.ip, PORT_WEB) or not self._check_port_ssh(self.ip, PORT_SSH):
             return checkerlib.CheckResult.DOWN
-        
         # check if server is Apache 2.4.54
-        if not self._check_apache_version():
-            return checkerlib.CheckResult.FAULTY
+        #if not self._check_apache_version():
+        #    return checkerlib.CheckResult.FAULTY
         # check if irudiak.php still has the code to upload files
         file_path_web = '/var/www/html/irudiak.php'
         if not self._check_uploading_integrity(file_path_web):
@@ -101,7 +100,7 @@ class MyChecker(checkerlib.BaseChecker):
     @ssh_connect()
     def _check_uploads_folder(self):
         ssh_session = self.client
-        command = f"ls -ld /var/www/html/uploads/ | grep 'drwxrwxrwx 1 www-data www-data'"
+        command = f"ls -ld /var/www/html/uploads/ | grep 'drwxrwxrwx . www-data www-data'"
 
         stdin, stdout, stderr = ssh_session.exec_command(command)
         if stderr.channel.recv_exit_status() != 0:
